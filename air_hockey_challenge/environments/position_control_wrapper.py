@@ -2,8 +2,10 @@ import mujoco
 import numpy as np
 import scipy
 from collections import deque
+import time
 
 from air_hockey_challenge.environments import planar as planar
+
 
 class PositionControl:
     def __init__(self, p_gain, d_gain, i_gain, action_type="position-velocity", interpolation_order=3,
@@ -40,12 +42,25 @@ class PositionControl:
             self.controller_record = deque(maxlen=self.info.horizon * self._n_intermediate_steps)
 
     def _enforce_safety_limits(self, desired_pos, desired_vel):
+        clipped_pos, clipped_vel, self.prev_controller_cmd_pos = self.enforce_safety_limits(
+            self.prev_controller_cmd_pos,
+            self.env_info['robot']["joint_pos_limit"],
+            self.env_info['robot']["joint_vel_limit"],
+            self.n_agents,
+            self._timestep,
+            desired_pos,
+            desired_vel)
+        return clipped_pos, clipped_vel
+
+    @staticmethod
+    def enforce_safety_limits(prev_controller_cmd_pos, joint_pos_limit, joint_vel_limit, n_agents, timestep,
+                              desired_pos, desired_vel):
         # ROS safe controller
-        pos = self.prev_controller_cmd_pos
+        pos = prev_controller_cmd_pos
         k = 20
 
-        joint_pos_lim = np.tile(self.env_info['robot']['joint_pos_limit'], (1, self.n_agents))
-        joint_vel_lim = np.tile(self.env_info['robot']['joint_vel_limit'], (1, self.n_agents))
+        joint_pos_lim = np.tile(joint_pos_limit, (1, n_agents))
+        joint_vel_lim = np.tile(joint_vel_limit, (1, n_agents))
 
         min_vel = np.clip(-k * (pos - joint_pos_lim[0]), joint_vel_lim[0], joint_vel_lim[1])
 
@@ -53,13 +68,13 @@ class PositionControl:
 
         clipped_vel = np.clip(desired_vel, min_vel, max_vel)
 
-        min_pos = pos + min_vel * self._timestep
-        max_pos = pos + max_vel * self._timestep
+        min_pos = pos + min_vel * timestep
+        max_pos = pos + max_vel * timestep
 
         clipped_pos = np.clip(desired_pos, min_pos, max_pos)
-        self.prev_controller_cmd_pos = clipped_pos.copy()
+        prev_controller_cmd_pos = clipped_pos.copy()
 
-        return clipped_pos, clipped_vel
+        return clipped_pos, clipped_vel, prev_controller_cmd_pos
 
     def _controller(self, desired_pos, desired_vel, desired_acc, current_pos, current_vel):
         clipped_pos, clipped_vel = self._enforce_safety_limits(desired_pos, desired_vel)
@@ -94,53 +109,72 @@ class PositionControl:
 
         return torque
 
-    def _interpolate_trajectory(self, action):
-        tf = self.dt
-        if self.interp_order == 1 and action.ndim == 1:
+    @staticmethod
+    def interpolate_trajectory(dt, interp_order, prev_pos, prev_vel, prev_acc, num_env_joints, num_coeffs, timestep,
+                               n_intermediate_steps,
+                               action):
+        tf = dt
+        if interp_order == 1 and action.ndim == 1:
             coef = np.array([[1, 0], [1, tf]])
-            results = np.vstack([self.prev_pos, action])
-        elif self.interp_order == 2 and action.ndim == 1:
+            results = np.vstack([prev_pos, action])
+        elif interp_order == 2 and action.ndim == 1:
             coef = np.array([[1, 0, 0], [1, tf, tf ** 2], [0, 1, 0]])
-            if np.linalg.norm(action - self.prev_pos) < 1e-3:
-                self.prev_vel = np.zeros_like(self.prev_vel)
-            results = np.vstack([self.prev_pos, action, self.prev_vel])
-        elif self.interp_order == 3 and action.shape[0] == 2:
+            if np.linalg.norm(action - prev_pos) < 1e-3:
+                prev_vel = np.zeros_like(prev_vel)
+            results = np.vstack([prev_pos, action, prev_vel])
+        elif interp_order == 3 and action.shape[0] == 2:
             coef = np.array([[1, 0, 0, 0], [1, tf, tf ** 2, tf ** 3], [0, 1, 0, 0], [0, 1, 2 * tf, 3 * tf ** 2]])
-            results = np.vstack([self.prev_pos, action[0], self.prev_vel, action[1]])
-        elif self.interp_order == 4 and action.shape[0] == 2:
+            results = np.vstack([prev_pos, action[0], prev_vel, action[1]])
+        elif interp_order == 4 and action.shape[0] == 2:
             coef = np.array([[1, 0, 0, 0, 0], [1, tf, tf ** 2, tf ** 3, tf ** 4],
                              [0, 1, 0, 0, 0], [0, 1, 2 * tf, 3 * tf ** 2, 4 * tf ** 3],
                              [0, 0, 2, 0, 0]])
-            results = np.vstack([self.prev_pos, action[0], self.prev_vel, action[1], self.prev_acc])
-        elif self.interp_order == 5 and action.shape[0] == 3:
+            results = np.vstack([prev_pos, action[0], prev_vel, action[1], prev_acc])
+        elif interp_order == 5 and action.shape[0] == 3:
             coef = np.array([[1, 0, 0, 0, 0, 0], [1, tf, tf ** 2, tf ** 3, tf ** 4, tf ** 5],
                              [0, 1, 0, 0, 0, 0], [0, 1, 2 * tf, 3 * tf ** 2, 4 * tf ** 3, 5 * tf ** 4],
                              [0, 0, 2, 0, 0, 0], [0, 0, 2, 6 * tf, 12 * tf ** 2, 20 * tf ** 3]])
-            results = np.vstack([self.prev_pos, action[0], self.prev_vel, action[1], self.prev_acc, action[2]])
+            results = np.vstack([prev_pos, action[0], prev_vel, action[1], prev_acc, action[2]])
         else:
             raise ValueError("Undefined interpolator order or the action dimension does not match!")
 
-        A = scipy.linalg.block_diag(*[coef] * self._num_env_joints)
+        A = scipy.linalg.block_diag(*[coef] * num_env_joints)
         y = results.reshape(-1, order='F')
 
-        weights = np.linalg.solve(A, y).reshape(self._num_env_joints, self._num_coeffs)
+        weights = np.linalg.solve(A, y).reshape(num_env_joints, num_coeffs)
         weights_d = np.polynomial.polynomial.polyder(weights, axis=1)
         weights_dd = np.polynomial.polynomial.polyder(weights_d, axis=1)
 
-        if self.interp_order in [3, 4, 5]:
-            self.jerk = np.abs(weights_dd[:, 1]) + np.abs(weights_dd[:, 0] - self.prev_acc) / self._timestep
+        if interp_order in [3, 4, 5]:
+            jerk = np.abs(weights_dd[:, 1]) + np.abs(weights_dd[:, 0] - prev_acc) / timestep
         else:
-            self.jerk = np.ones_like(self.prev_acc) * np.inf
+            jerk = np.ones_like(prev_acc) * np.inf
 
-        self.prev_pos = np.polynomial.polynomial.polyval(tf, weights.T)
-        self.prev_vel = np.polynomial.polynomial.polyval(tf, weights_d.T)
-        self.prev_acc = np.polynomial.polynomial.polyval(tf, weights_dd.T)
+        prev_pos = np.polynomial.polynomial.polyval(tf, weights.T)
+        prev_vel = np.polynomial.polynomial.polyval(tf, weights_d.T)
+        prev_acc = np.polynomial.polynomial.polyval(tf, weights_dd.T)
 
-        for t in np.linspace(self._timestep, self.dt, self._n_intermediate_steps):
-            q = np.polynomial.polynomial.polyval(t, weights.T)
-            qd = np.polynomial.polynomial.polyval(t, weights_d.T)
-            qdd = np.polynomial.polynomial.polyval(t, weights_dd.T)
-            yield q, qd, qdd
+        def generator():
+            for t in np.linspace(timestep, dt, n_intermediate_steps):
+                q = np.polynomial.polynomial.polyval(t, weights.T)
+                qd = np.polynomial.polynomial.polyval(t, weights_d.T)
+                qdd = np.polynomial.polynomial.polyval(t, weights_dd.T)
+                yield q, qd, qdd
+
+        return generator(), prev_pos, prev_vel, prev_acc, jerk
+
+    def _interpolate_trajectory(self, action):
+        traj, self.prev_pos, self.prev_vel, self.prev_acc, self.jerk = self.interpolate_trajectory(self.dt,
+                                                                                                   self.interp_order,
+                                                                                                   self.prev_pos,
+                                                                                                   self.prev_vel,
+                                                                                                   self.prev_acc,
+                                                                                                   self._num_env_joints,
+                                                                                                   self._num_coeffs,
+                                                                                                   self._timestep,
+                                                                                                   self._n_intermediate_steps,
+                                                                                                   action)
+        return traj
 
     def reset(self, obs=None):
         obs = super(PositionControl, self).reset(obs)
