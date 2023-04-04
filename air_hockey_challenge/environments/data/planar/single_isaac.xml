@@ -140,9 +140,6 @@
 
     <contact>
         <exclude body1="puck" body2="table_surface"/>
-    </contact>
-
-    <contact>
         <exclude body1="planar_robot_1/body_ee" body2="table_surface"/>
         <exclude body1="planar_robot_1/body_hand" body2="table_surface"/>
         <exclude body1="planar_robot_1/body_3" body2="table_surface"/>
