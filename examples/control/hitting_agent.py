@@ -80,7 +80,6 @@ class HittingAgent(AgentBase):
             if not self.optimization_failed:
                 time.sleep(0.01)
 
-        # print(self.last_cmd)
         return self.last_cmd
 
     def _plan_trajectory_thread(self, puck_pos, ee_pos, joint_pos, joint_vel):
@@ -94,11 +93,6 @@ class HittingAgent(AgentBase):
             self.joint_trajectory = np.array([])
 
     def plan_ee_trajectory(self, puck_pos, ee_pos):
-        # print('puck_pos: ')
-        # print(puck_pos)
-        # print('ee_pos')
-        # print(ee_pos)
-        # exit(0)
         goal_pos = np.array([0.98, 0.0, 0.0])
         goal_pos_robot = world_to_robot(self.env_info["robot"]["base_frame"][0], goal_pos)
         goal_pos_2d = goal_pos_robot[0][:2]

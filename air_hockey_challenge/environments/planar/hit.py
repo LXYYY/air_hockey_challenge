@@ -27,8 +27,7 @@ class AirHockeyHit(AirHockeySingle):
     @staticmethod
     def get_reset_puck_pos(hit_range):
         # Initial position of the puck
-        # return np.random.rand(2) * (hit_range[:, 1] -hit_range[:, 0]) +hit_range[:, 0]
-        return np.zeros(2)
+        return np.ones(2) * 0.5 * (hit_range[:, 1] - hit_range[:, 0]) + hit_range[:, 0]
 
     def setup(self, state=None):
         # Initial position of the puck
