@@ -65,7 +65,7 @@
                     <joint name="puck_yaw" type="hinge" axis="0 0 1" damping="2e-6" limited="false"/>
                     <body name="puck">
                         <geom pos="0 0 0" name="puck" type="cylinder" material="red" size="0.03165 0.003"
-                              condim="4" priority="0" friction="0 0 0"/>
+                              condim="4" priority="0" friction="0 0 0" contype="0" conaffinity="0"/>
                         <geom pos="0.02 0 0" type="cylinder" material="blue" size="0.01 0.0031"
                               condim="4" contype="0" conaffinity="0"/>
                         <inertial pos="0 0 0" mass="0.01" diaginertia="2.5e-6 2.5e-6 5e-6"/>
@@ -95,7 +95,7 @@
             <body name="planar_robot_1/base" pos="-1.51 0 0">
                 <geom type="cylinder" material="black" size="0.075 0.2" pos="0 0 0.2" class="visual"/>
                 <inertial pos="0 0 0" mass="1" diaginertia="0.05 0.018 0.044"/>
-                <body name="planar_robot_1/body_1" pos="0 0 0.25">
+                <body name="planar_robot_1/body_1" pos="0 0 0.255">
                     <joint name="planar_robot_1/joint_1" axis="0 0 1"
                            range="-2.9670597283903604 2.9670597283903604"/>
                     <inertial pos="0.25 0 0" mass="3" diaginertia="0.064375 0.064375 0.00375"/>
