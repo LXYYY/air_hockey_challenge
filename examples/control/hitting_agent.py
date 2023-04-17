@@ -47,7 +47,7 @@ class HittingAgent(AgentBase):
         self.bezier_planner = BezierPlanner(table_bounds, self.dt)
         self.optimizer = TrajectoryOptimizer(self.env_info)
         if self.env_info['robot']['n_joints'] == 3:
-            self.joint_anchor_pos = np.array([-1.15570723,  1.30024401,  1.44280414])
+            self.joint_anchor_pos = np.array([-1.15570723, 1.30024401, 1.44280414])
         else:
             self.joint_anchor_pos = np.array([6.28479822e-11, 7.13520517e-01, -2.96302903e-11, -5.02477487e-01,
                                               -7.67250279e-11, 1.92566224e+00, -2.34645597e-11])
@@ -66,7 +66,8 @@ class HittingAgent(AgentBase):
             joint_vel = self.get_joint_vel(obs)
             ee_pos, _ = self.get_ee_pose(obs)
             self.last_cmd = np.vstack([joint_pos, joint_vel])
-            self.plan_thread = threading.Thread(target=self._plan_trajectory_thread, args=(puck_pos, ee_pos, joint_pos, joint_vel))
+            self.plan_thread = threading.Thread(target=self._plan_trajectory_thread,
+                                                args=(puck_pos, ee_pos, joint_pos, joint_vel))
             self.plan_thread.start()
 
         if len(self.joint_trajectory) > 0:
@@ -78,6 +79,7 @@ class HittingAgent(AgentBase):
             self.last_cmd[1] = np.zeros(self.env_info['robot']['n_joints'])
             if not self.optimization_failed:
                 time.sleep(0.01)
+
         return self.last_cmd
 
     def _plan_trajectory_thread(self, puck_pos, ee_pos, joint_pos, joint_vel):

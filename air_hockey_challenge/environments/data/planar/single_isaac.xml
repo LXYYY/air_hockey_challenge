@@ -1,0 +1,157 @@
+<mujoco model="AirHockeySingle">
+
+    <option timestep="0.001" cone="elliptic" impratio="1"/>
+    <compiler autolimits="true" angle="radian"/>
+    <asset>
+        <material name="dark_red" rgba="0.58 0.03 0.25 1"/>
+        <material name="black" rgba="0.1 0.1 0.11 1"/>
+
+        <material name="grey" specular="0.5" shininess="0.25" rgba="0.8 0.8 0.8 1"/>
+        <material name="white" specular="0.5" shininess="0.25" rgba="1.0 1.0 1.0 1"/>
+        <material name="red" specular="0.5" shininess="0.25" rgba="1.0 0.0 0.0 1"/>
+        <material name="blue" specular="0.5" shininess="0.25" rgba="0.0 0.0 1.0 1"/>
+        <material name="transparent" specular="0.5" shininess="0.25" rgba="0.0 0.0 1.0 0"/>
+
+        <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512"
+                 height="3072"/>
+        <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4"
+                 rgb2="0.1 0.2 0.3" markrgb="0.8 0.8 0.8" width="300" height="300"/>
+        <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5"
+                  reflectance="0.2"/>
+    </asset>
+
+    <default>
+        <default class="visual">
+            <geom contype="0" conaffinity="0"/>
+        </default>
+
+        <default class="robot">
+            <geom condim="4" solref="0.02 0.3" priority="2"/>
+        </default>
+
+        <geom condim="4" solref="0.02 0.3"/>
+        <default class="rim">
+            <geom type="box" material="grey" condim="6" friction="10000 0.0 0.0" priority="1"
+                  solref="-2000000 -250" solimp="0.99 0.999 0.001 0.5 2"/>
+        </default>
+    </default>
+
+    <worldbody>
+        <body name="air_hockey" pos="0 0 0">
+            <geom pos="0 0 0" name="floor" size="0 0 0.05" type="plane" material="groundplane"/>
+            <body name="table">
+                <body name="table_surface">
+                    <geom name="surface" type="box" material="white" size="1.064 0.609 0.05" pos="0 0 0.05"
+                          condim="4" friction="0.08 0.08 0.0" priority="1"
+                          solref="0.0125 0.5" solimp="0.9 0.999 0.001 0.5 2"/>
+                </body>
+                <body name="rim" pos="0 0 0.1">
+                    <geom name="rim_home_l" class="rim" size="0.045 0.197 0.015" pos="-1.019 0.322 0.015"/>
+                    <geom name="rim_home_r" class="rim" size="0.045 0.197 0.015" pos="-1.019 -0.322 0.015"/>
+<!--                    <geom name="rim_home_top" class="rim" size="0.045 0.519 0.01" pos="-1.019 0 0.02"/>-->
+
+                    <geom name="rim_left" class="rim" size="1.064 0.045 0.015" pos="0 0.564 0.015"/>
+                    <geom name="rim_right" class="rim" size="1.064 0.045 0.015" pos="0 -0.564 0.015"/>
+
+                    <geom name="rim_away_l" class="rim" size="0.045 0.197 0.015" pos="1.019 0.322 0.015"/>
+                    <geom name="rim_away_r" class="rim" size="0.045 0.197 0.015" pos="1.019 -0.322 0.015"/>
+<!--                    <geom name="rim_away_top" class="rim" size="0.045 0.519 0.01" pos="1.019 0 0.02"/>-->
+                </body>
+
+                <body name="base" pos="0 0 0.1031">
+                    <joint name="puck_x" type="slide" axis="1 0 0" damping="0.005" limited="false"/>
+                    <joint name="puck_y" type="slide" axis="0 1 0" damping="0.005" limited="false"/>
+                    <joint name="puck_z" type="slide" axis="0 0 1" damping="0.005" limited="false"/>
+                    <joint name="puck_yaw" type="hinge" axis="0 0 1" damping="2e-6" limited="false"/>
+                    <body name="puck">
+                        <geom pos="0 0 0" name="puck" type="cylinder" material="red" size="0.03165 0.003"
+                              condim="4" priority="0" friction="0 0 0" contype="0" conaffinity="0"/>
+                        <geom pos="0.02 0 0" type="cylinder" material="blue" size="0.01 0.0031"
+                              condim="4" />
+                        <inertial pos="0 0 0" mass="0.01" diaginertia="2.5e-6 2.5e-6 5e-6"/>
+                    </body>
+                </body>
+            </body>
+
+            <body name="puck_record" pos="0 0 0">
+                <joint name="puck_record_x" type="slide" axis="1 0 0" damping="0.005" limited="false"/>
+                <joint name="puck_record_y" type="slide" axis="0 1 0" damping="0.005" limited="false"/>
+                <inertial pos="0 0 0" mass="0.01" diaginertia="2.5e-6 2.5e-6 5e-6"/>
+                <body>
+                    <joint name="puck_record_yaw_vis" type="hinge" axis="0 0 1" damping="2e-6" limited="false"/>
+                    <geom pos="0 0 0" name="puck_record" type="ellipsoid" size="0.03165 0.03165 0.004"
+                          material="transparent"
+                          condim="4" friction="0.1 0 0" contype="0" conaffinity="0"/>
+                </body>
+                <body>
+                    <joint name="puck_record_yaw" type="hinge" axis="0 0 1" damping="2e-6" limited="false"/>
+                    <geom pos="0.016 0 0" zaxis="1 0 0" name="puck_record_ori" type="cylinder" material="transparent"
+                          size="0.0045 0.016 "
+                          condim="4" friction="0.1 0 0" contype="0" conaffinity="0"/>
+                    <inertial pos="0 0 0" mass="0.01" diaginertia="2.5e-6 2.5e-6 5e-6"/>
+                </body>
+            </body>
+
+            <body name="planar_robot_1/base" pos="-1.51 0 0">
+                <geom type="cylinder" material="black" size="0.075 0.2" pos="0 0 0.2" class="visual"/>
+                <inertial pos="0 0 0" mass="1" diaginertia="0.05 0.018 0.044"/>
+                <body name="planar_robot_1/body_1" pos="0 0 0.255">
+                    <joint name="planar_robot_1/joint_1" axis="0 0 1"
+                           range="-2.9670597283903604 2.9670597283903604"/>
+                    <inertial pos="0.25 0 0" mass="3" diaginertia="0.064375 0.064375 0.00375"/>
+                    <geom condim="4" solref="0.02 0.3" priority="2" type="cylinder" material="dark_red" size="0.04 0.275" euler="0 1.57079632679 0"
+                          pos="0.275 0 0"/>
+                    <body name="planar_robot_1/body_2" pos="0.55 0 0">
+                        <joint name="planar_robot_1/joint_2" axis="0 0 1" range="-1.8 1.8"/>
+                        <inertial pos="0.2 0 0" mass="2" diaginertia="0.0335 0.0335 0.003"/>
+                        <geom  condim="4" solref="0.02 0.3" priority="2" type="cylinder" material="dark_red" size="0.04 0.22"
+                              euler="0 1.57079632679 0" pos="0.22 0 0"/>
+                        <geom  condim="4" solref="0.02 0.3" priority="2" type="sphere" material="dark_red" size="0.05"/>
+                        <body name="planar_robot_1/body_3" pos="0.44 0 0">
+                            <joint name="planar_robot_1/joint_3" axis="0 0 1"
+                                   range="-2.0943951023931953 2.0943951023931953"/>
+                            <inertial pos="0.2 0 0" mass="2" diaginertia="0.0335 0.0335 0.003"/>
+                            <geom  condim="4" solref="0.02 0.3" priority="2" type="cylinder" material="dark_red" size="0.04 0.22"
+                                  euler="0 1.57079632679 0" pos="0.22 0 0"/>
+                            <geom  condim="4" solref="0.02 0.3" priority="2" type="sphere" material="dark_red" size="0.05"/>
+                            <body name="planar_robot_1/body_hand" pos="0.44 0 0">
+                                <inertial pos="0 0 0" mass="0.1" diaginertia="0.0008 0.0023 0.0023"/>
+                                <geom condim="4" solref="0.02 0.3" priority="2" type="sphere" material="dark_red" size="0.05"/>
+                                <geom condim="4" solref="0.02 0.3" priority="2" type="cylinder" material="black" size="0.01 0.075"
+                                      pos="0 0 -0.075"/>
+                                <body name="planar_robot_1/body_ee" pos="0 0 -0.15">
+                                    <inertial pos="0 0 0" mass="0.1" diaginertia="0.0008 0.0023 0.0023"/>
+                                    <geom condim="4" solref="0.02 0.3" priority="2" name="planar_robot_1/ee" type="cylinder" material="black"
+                                          size="0.04815 0.01" pos="0 0 0.01" friction="0 0 0"/>
+                                </body>
+                            </body>
+                        </body>
+                    </body>
+                </body>
+            </body>
+        </body>
+    </worldbody>
+
+    <actuator>
+        <motor name="planar_robot_1/joint_1" joint="planar_robot_1/joint_1" ctrlrange="-100 100"/>
+        <motor name="planar_robot_1/joint_2" joint="planar_robot_1/joint_2" ctrlrange="-50 50"/>
+        <motor name="planar_robot_1/joint_3" joint="planar_robot_1/joint_3" ctrlrange="-30 30"/>
+    </actuator>
+
+    <contact>
+        <exclude body1="puck" body2="table_surface"/>
+        <exclude body1="planar_robot_1/body_ee" body2="table_surface"/>
+        <exclude body1="planar_robot_1/body_hand" body2="table_surface"/>
+        <exclude body1="planar_robot_1/body_3" body2="table_surface"/>
+        <exclude body1="planar_robot_1/body_2" body2="table_surface"/>
+        <exclude body1="planar_robot_1/body_1" body2="table_surface"/>
+        <exclude body1="planar_robot_1/base" body2="table_surface"/>
+        <exclude body1="planar_robot_1/body_ee" body2="rim"/>
+        <exclude body1="planar_robot_1/body_hand" body2="rim"/>
+        <exclude body1="planar_robot_1/body_3" body2="rim"/>
+        <exclude body1="planar_robot_1/body_2" body2="rim"/>
+        <exclude body1="planar_robot_1/body_1" body2="rim"/>
+        <exclude body1="planar_robot_1/base" body2="rim"/>
+    </contact>
+
+</mujoco>

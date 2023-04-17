@@ -132,7 +132,8 @@ class AirHockeyBase(MuJoCo):
 
         # Add env_info that requires mujoco models
         self.env_info['dt'] = self.dt
-        self.env_info["robot"]["joint_pos_limit"] = np.array([self._model.joint(f"planar_robot_1/joint_{i + 1}").range for i in range(3)]).T
+        self.env_info["robot"]["joint_pos_limit"] = np.array(
+            [self._model.joint(f"planar_robot_1/joint_{i + 1}").range for i in range(3)]).T
         self.env_info["robot"]["robot_model"] = robot_model
         self.env_info["robot"]["robot_data"] = robot_data
         self.env_info["rl_info"] = self.info
